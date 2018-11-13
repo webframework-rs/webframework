@@ -1,0 +1,15 @@
+[package]
+authors = ["Marcel Müller <neikos@neikos.email>"]
+edition = "2018"
+name = "webframework-derive"
+version = "0.1.0"
+
+[dependencies]
+quote = "0.6.10"
+
+[dependencies.syn]
+features = ["full"]
+version = "0.15.20"
+
+[lib]
+proc-macro = true
