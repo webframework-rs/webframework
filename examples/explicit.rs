@@ -1,4 +1,4 @@
-#[macro_use] extern crate webframework as wfw;
+extern crate webframework as wfw;
 extern crate failure;
 
 use crate::wfw::prelude::*;
