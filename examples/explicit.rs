@@ -40,7 +40,7 @@ routing! {
 
 routing! {
     RootRouter => {
-        DLG "/tasks" => TaskRouter;
+        delegate "/tasks" => TaskRouter;
         GET "/about" => about;
         GET "/" => root;
         NotFound => handle404;
@@ -49,6 +49,10 @@ routing! {
 
 fn main() -> Result<(), failure::Error> {
     let server = wfw::server::load();
+
+    let map = RootRouter.router_map();
+
+    println!("{:#?}", map);
 
     server.handle_with(RootRouter)
 }

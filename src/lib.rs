@@ -11,5 +11,6 @@ pub mod router;
 pub mod error;
 
 pub use webframework_derive::controller;
+pub use webframework_derive::routing;
 
 pub type WebResult<T> = ::std::result::Result<T, failure::Error>;
