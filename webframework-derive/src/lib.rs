@@ -3,23 +3,39 @@ extern crate proc_macro;
 extern crate syn;
 
 use crate::proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream, Result as SynResult};
 use syn::{parse_macro_input, braced, ItemFn, Ident, Token, LitStr, Visibility};
 use syn::token::Brace;
 use syn::punctuated::Punctuated;
 
 #[proc_macro_attribute]
-pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn controller(_args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
 
-    let ItemFn { attrs, vis, constness, unsafety, asyncness, abi, ident, decl, block, .. } = func;
+    let ItemFn { vis, ident, block, .. } = func;
 
     TokenStream::from(quote!(
         #vis fn #ident(req: ::webframework::request::Request)
-            -> Box<dyn ::futures::Future<Item = ::webframework::response::Response, Error = ::failure::Error> + Send> {
+            -> ::webframework::router::RouterResult {
             let result = ||{ #block };
-            return Box::new(::futures::future::result(result()));
+            ::webframework::router::RouterResult::Handled(
+                Box::new(::futures::future::result(result()))
+            )
+        }
+    ))
+}
+
+#[proc_macro_attribute]
+pub fn meta_controller(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let func = parse_macro_input!(input as ItemFn);
+
+    let ItemFn { vis, ident, block, .. } = func;
+
+    TokenStream::from(quote!(
+        #vis fn #ident(req: ::webframework::request::Request) -> ::webframework::router::RouterFuture {
+            let result = ||{ #block };
+            Box::new(::futures::future::result(result()))
         }
     ))
 }
@@ -62,7 +78,8 @@ struct InnerRoute {
 
 enum InnerRouteKind {
     Multiple(Punctuated<InnerRoute, Token![;]>),
-    Single(Ident)
+    Single(Ident),
+    Meta(Ident, Ident),
 }
 
 struct Route {
@@ -73,6 +90,15 @@ struct Route {
 
 impl Parse for Route {
     fn parse(input: ParseStream) -> SynResult<Self> {
+        if input.peek(Token![>>]) {
+            input.parse::<Token![>>]>()?;
+            let name: Ident = input.parse()?;
+            input.parse::<Token![=>]>()?;
+            let controller: Ident = input.parse()?;
+            return Ok( Route { restrictions: vec![], path: None,
+                kind: InnerRouteKind::Meta(name, controller) } );
+        }
+
         let mut restrictions: Vec<Ident> = vec![];
         while input.peek(Ident) {
             restrictions.push(input.parse()?);
@@ -112,7 +138,17 @@ pub fn routing(input: TokenStream) -> TokenStream {
         let restr = &route.restrictions;
         let path = route.path.as_ref().map(|path| {
             quote! {
-                ::webframework::request_filters::RequestFilter::handles(&#path, &req)
+                {
+                    let matched_path = ::webframework::request_filters::PathFilter::handles(&#path, &req, &path);
+
+                    match matched_path {
+                        ::webframework::request_filters::PathFilterResult::Matched(new_path) => {
+                            path = new_path;
+                            true
+                        }
+                        ::webframework::request_filters::PathFilterResult::NotMatched => false,
+                    }
+                }
             }
         }).unwrap_or_else(|| quote!{ true });
         let handler = match &route.kind {
@@ -120,9 +156,24 @@ pub fn routing(input: TokenStream) -> TokenStream {
                 let inner = mul.iter().map(|inner| {
                     let restr = &inner.restrictions;
                     let ctrl = &inner.controller;
+                    let assert_router = quote_spanned! {ctrl.span() =>
+                        {
+                            fn __assert_router<F: ::webframework::router::Router>(_: F) { }
+                            __assert_router(#ctrl);
+                        }
+                    };
                     quote! {
                         if true #(&& ::webframework::request_filters::RequestFilter::handles(&#restr, &req))* {
-                            return ::webframework::router::Router::handle(&#ctrl, req);
+                            #assert_router
+
+                            match ::webframework::router::Router::handle(&#ctrl, req, Some(path.clone())) {
+                                ::webframework::router::RouterResult::Handled(resp) => {
+                                    return ::webframework::router::RouterResult::Handled(resp);
+                                }
+                                ::webframework::router::RouterResult::Unhandled(re) => {
+                                    req = re;
+                                }
+                            }
                         }
                     }
                 });
@@ -131,8 +182,46 @@ pub fn routing(input: TokenStream) -> TokenStream {
                 }
             }
             InnerRouteKind::Single(sing) => {
+                let assert_router = quote_spanned! {sing.span() =>
+                    {
+                        fn __assert_router<F: ::webframework::router::Router>(_: F) { }
+                        __assert_router(#sing);
+                    }
+                };
                 quote! {
-                    return ::webframework::router::Router::handle(&#sing, req);
+                    #assert_router
+
+                    match ::webframework::router::Router::handle(&#sing, req, Some(path.clone())) {
+                        ::webframework::router::RouterResult::Handled(resp) => {
+                            return ::webframework::router::RouterResult::Handled(resp);
+                        }
+                        ::webframework::router::RouterResult::Unhandled(re) => {
+                            req = re;
+                        }
+                    }
+                }
+            }
+            InnerRouteKind::Meta(name, ctrl) => {
+                let assert_meta = quote_spanned! {ctrl.span() =>
+                    {
+                        fn __assert_meta<F: ::webframework::router::MetaRouter>(_: F) { }
+                        __assert_meta(#ctrl);
+                    }
+                };
+
+                match &name.to_string()[..] {
+                    "NotFound" => {
+                        quote! {
+                            #assert_meta
+
+                            return ::webframework::router::RouterResult::Handled(
+                                ::webframework::router::MetaRouter::handle(&#ctrl, req)
+                            );
+                        }
+                    }
+                    _ => {
+                        panic!("Unknown meta element {}", name.to_string());
+                    }
                 }
             }
         };
@@ -145,15 +234,31 @@ pub fn routing(input: TokenStream) -> TokenStream {
         }
     }).collect();
 
+    let route_maps: Vec<_> = routes.iter().map(|_route| {
+        quote! {
+
+        }
+    }).collect();
+
     let expanded = quote! {
         #[derive(Debug, Clone)]
         #visibility struct #name;
 
         impl ::webframework::router::Router for #name {
-            fn handle(&self, req: ::webframework::request::Request)
-                -> ::webframework::router::RouterFuture {
+            fn handle(&self, mut req: ::webframework::request::Request, path: Option<String>)
+                -> ::webframework::router::RouterResult {
+                let mut path = path.unwrap_or_else(|| req.uri().path().to_string());
                 #( #route_handlers );*;
-                unreachable!()
+
+                return ::webframework::router::RouterResult::Unhandled(req);
+            }
+
+            fn router_map(&self) -> Option<::webframework::router::RouterMap> {
+                let mut map = ::webframework::router::RouterMap::new();
+
+                #( #route_maps );*
+
+                Some(map)
             }
         }
     };

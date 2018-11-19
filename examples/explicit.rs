@@ -3,9 +3,9 @@ extern crate failure;
 
 use crate::wfw::prelude::*;
 
-#[controller]
+#[meta_controller]
 fn handle404(req: Request) -> WebResponse {
-    Ok(Response::from_string(format!("Could not find path {}", req.path()))
+    Ok(Response::from_string(format!("Could not find path {}", req.uri().path()))
         .with_status(StatusCode::NOT_FOUND))
 }
 
@@ -15,7 +15,9 @@ fn root(_req: Request) -> WebResponse {
 }
 
 #[controller]
-fn about(_req: Request) -> WebResponse { unimplemented!() }
+fn about(_req: Request) -> WebResponse {
+    Ok(Response::from_string("About Webframework"))
+}
 
 #[controller]
 fn create_task(req: Request) -> WebResponse {
@@ -23,10 +25,14 @@ fn create_task(req: Request) -> WebResponse {
 }
 
 #[controller]
-fn tasks(_req: Request) -> WebResponse { unimplemented!() }
+fn tasks(_req: Request) -> WebResponse {
+    Ok(Response::from_string("List of tasks!"))
+}
 
 #[controller]
-fn tasks_json(_req: Request) -> WebResponse { unimplemented!() }
+fn tasks_json(_req: Request) -> WebResponse {
+    Ok(Response::from_string("{msg: \"List of tasks\"}"))
+}
 
 routing! {
     TaskRouter => {
@@ -43,7 +49,7 @@ routing! {
         delegate "/tasks" => TaskRouter;
         GET "/about" => about;
         GET "/" => root;
-        NotFound => handle404;
+        >> NotFound => handle404;
     }
 }
 

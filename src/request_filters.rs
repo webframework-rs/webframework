@@ -1,11 +1,34 @@
-#![allow(non_snake_case)]
+#![allow(non_snake_case, non_camel_case_types)]
 use crate::request::Request;
 
-pub trait PathFilter: RequestFilter {
+use http;
+use http::method::Method;
+
+pub enum PathFilterResult {
+    NotMatched,
+    Matched(String),
+}
+
+pub trait PathFilter {
+    fn handles(&self, req: &Request, path: &str) -> PathFilterResult;
     fn name(&self) -> String;
 }
 
 impl<'a> PathFilter for &'a str {
+    fn handles(&self, req: &Request, path: &str) -> PathFilterResult {
+        let log = req.log();
+
+        let result = self == &path;
+
+        if result {
+            slog::info!(log, "matching path {}", self);
+            PathFilterResult::Matched(path.to_string())
+        } else {
+            slog::debug!(log, "skipping path {}", self);
+            PathFilterResult::NotMatched
+        }
+    }
+
     fn name(&self) -> String {
         self.to_string()
     }
@@ -13,51 +36,65 @@ impl<'a> PathFilter for &'a str {
 
 pub trait RequestFilter {
     fn handles(&self, req: &Request) -> bool;
+    fn description() -> String;
 }
 
-impl<'a> RequestFilter for &'a str {
-    fn handles(&self, _req: &Request) -> bool {
+macro_rules! request_filter {
+    ( $name:ident, $desc:expr => $req:ident $impl:block ) => {
+        pub struct $name;
+
+        impl $crate::request_filters::RequestFilter for $name {
+            fn handles(&self, $req: &$crate::request_filters::Request) -> bool {
+                let val: bool = $impl;
+
+                if val {
+                    let log = $req.log();
+                    slog::debug!(log, "filtered by {}", stringify!($name);"request_filter" => stringify!($name));
+                }
+
+                return val;
+            }
+
+            fn description() -> String {
+                String::from($desc)
+            }
+        }
+    };
+}
+
+request_filter! {
+    POST, "Requires POST HTTP Method" => req {
+        req.method() == Method::POST
+    }
+}
+
+request_filter! {
+    GET, "Requires POST GET Method" => req {
+        req.method() == Method::GET
+    }
+}
+
+request_filter! {
+    delegate, "Delegates to the next filter or router" => req {
         true
     }
 }
 
-impl<F> RequestFilter for F where F: Fn(&Request) -> bool {
-    fn handles(&self, req: &Request) -> bool {
-        self(req)
+request_filter! {
+    html, "Requires the client to request HTML" => req {
+        let _html_type = "text/html";
+        let client_accept = req.inner_req().headers().get(http::header::ACCEPT);
+        if let Some(_header) = client_accept {
+            false
+        } else {
+            false
+        }
     }
 }
 
-pub struct NotFound;
-
-impl RequestFilter for NotFound {
-    fn handles(&self, _req: &Request) -> bool {
-        true
+request_filter! {
+    json, "Requires the client to request JSON" => req {
+        let _json_type = "application/javascript";
+        req.method() == Method::GET
     }
 }
-
-impl PathFilter for NotFound {
-    fn name(&self) -> String {
-        "NotFound".to_string()
-    }
-}
-
-pub fn POST(_req: &Request) -> bool {
-    true
-}
-
-pub fn GET(_req: &Request) -> bool {
-    true
-}
-
-pub fn delegate(_: &Request) -> bool {
-    true
-}
-
-pub fn html(_req: &Request) -> bool {
-    true
-}
-
-pub fn json(_req: &Request) -> bool {
-    true
-}
-
