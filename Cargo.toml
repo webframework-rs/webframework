@@ -2,7 +2,19 @@
 authors = ["Marcel Müller <neikos@neikos.email>"]
 edition = "2018"
 name = "webframework"
-version = "0.1.0"
+version = "0.0.1"
+description = "An extensible webframework, its main purpose is to be: safe, fun, fast."
+homepage = "https://github.com/webframework-rs/webframework"
+repository = "https://github.com/webframework-rs/webframework"
+license = "MIT"
+readme = "README.md"
+keywords = ["webframework", "fun"]
+categories = ["web-programming", ""]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+
 
 [dependencies]
 failure = "0.1.3"
@@ -20,3 +32,4 @@ version = "0.7"
 [dependencies.webframework-derive]
 optional = false
 path = "webframework-derive/"
+version = "0.0.1"

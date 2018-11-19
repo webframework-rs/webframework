@@ -2,7 +2,11 @@
 authors = ["Marcel Müller <neikos@neikos.email>"]
 edition = "2018"
 name = "webframework-derive"
-version = "0.1.0"
+version = "0.0.1"
+description = "You should not use this crate directly, it is internal to Webframework."
+homepage = "https://github.com/webframework-rs/webframework"
+repository = "https://github.com/webframework-rs/webframework"
+license = "MIT"
 
 [dependencies]
 quote = "0.6.10"
