@@ -1,5 +1,7 @@
 extern crate webframework as wfw;
 extern crate failure;
+extern crate lazy_static;
+extern crate regex;
 
 use crate::wfw::prelude::*;
 
@@ -10,33 +12,45 @@ fn handle404(req: Request) -> WebResponse {
 }
 
 #[controller]
-fn root(_req: Request) -> WebResponse {
+fn root() -> WebResponse {
     Ok(Response::from_string("Hello World!"))
 }
 
 #[controller]
-fn about(_req: Request) -> WebResponse {
+fn about() -> WebResponse {
     Ok(Response::from_string("About Webframework"))
 }
 
 #[controller]
-fn create_task(req: Request) -> WebResponse {
+fn create_task() -> WebResponse {
     Ok(Response::from_string("Hello World!"))
 }
 
 #[controller]
-fn tasks(_req: Request) -> WebResponse {
+fn new_task() -> WebResponse {
+    Ok(Response::from_string("Hello World!"))
+}
+
+#[controller]
+fn tasks() -> WebResponse {
     Ok(Response::from_string("List of tasks!"))
 }
 
 #[controller]
-fn tasks_json(_req: Request) -> WebResponse {
+fn tasks_json() -> WebResponse {
     Ok(Response::from_string("{msg: \"List of tasks\"}"))
+}
+
+#[controller]
+#[params="test"]
+fn dynamic_path(test: String) -> WebResponse {
+    Ok(Response::from_string(format!("Dynamic segment was: {}", test)))
 }
 
 routing! {
     TaskRouter => {
         POST "/create" => create_task;
+        GET "/new" => new_task;
         GET "/" => {
             html => tasks;
             json => tasks_json;
@@ -48,6 +62,7 @@ routing! {
     RootRouter => {
         delegate "/tasks" => TaskRouter;
         GET "/about" => about;
+        GET "/:test" => dynamic_path;
         GET "/" => root;
         >> NotFound => handle404;
     }

@@ -4,6 +4,7 @@ extern crate hyper;
 extern crate slog;
 extern crate slog_term;
 extern crate slog_async;
+extern crate regex;
 
 pub mod prelude;
 pub mod request;

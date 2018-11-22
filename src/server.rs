@@ -5,6 +5,7 @@ use crate::error::{ServiceError, ServiceErrorKind};
 
 use std::net::SocketAddr;
 use std::time::Instant;
+use std::collections::HashMap;
 
 use failure;
 use futures::future::{self, Future, FutureResult};
@@ -46,12 +47,13 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
     fn call(&mut self, req: hyper::Request<hyper::Body>) -> Self::Future {
         let id = Uuid::new_v4();
         let string_id = id.to_string();
-        let new_logger = self.logger.new(slog::o!( "path" => req.uri().path().to_string(),
+        let new_logger = self.logger.new(slog::o!("path" => req.uri().path().to_string(),
                                                    "id" => string_id.clone()));
-        let time_logger = self.logger.new(slog::o!("id" => string_id.clone()));
+        let time_logger = self.logger.new(slog::o!("path" => req.uri().path().to_string(),
+                                                   "id" => string_id.clone()));
         let request = Request::from_req(id, new_logger, req);
         let now = Instant::now();
-        let ret : Box<dyn Future<Item = _, Error = _> + Send> = match self.router.handle(request, None) {
+        let ret : Box<dyn Future<Item = _, Error = _> + Send> = match self.router.handle(request, None, HashMap::new()) {
             RouterResult::Handled(resp) => {
                 Box::new(resp.and_then(|resp| {
                     resp.as_response()
@@ -59,7 +61,7 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                     future::err(e.context(ServiceErrorKind::RequestError).into())
                 }))
             }
-            RouterResult::Unhandled(_req) => {
+            RouterResult::Unhandled(_, _) => {
                 Box::new(future::err(ServiceErrorKind::RequestError.into()))
             }
         };

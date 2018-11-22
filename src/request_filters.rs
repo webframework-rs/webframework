@@ -1,12 +1,16 @@
 #![allow(non_snake_case, non_camel_case_types)]
 use crate::request::Request;
 
+use std::collections::HashMap;
+
 use http;
 use http::method::Method;
+use regex::Regex;
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PathFilterResult {
     NotMatched,
-    Matched(String),
+    Matched(String, HashMap<String, String>),
 }
 
 pub trait PathFilter {
@@ -14,17 +18,35 @@ pub trait PathFilter {
     fn name(&self) -> String;
 }
 
-impl<'a> PathFilter for &'a str {
-    fn handles(&self, req: &Request, path: &str) -> PathFilterResult {
-        let log = req.log();
-
-        let result = self == &path;
+impl PathFilter for Regex {
+    fn handles(&self, _req: &Request, path: &str) -> PathFilterResult {
+        let result = self.is_match(path);
 
         if result {
-            slog::info!(log, "matching path {}", self);
-            PathFilterResult::Matched(path.to_string())
+            let captures = self.captures(path).unwrap();
+            let end = captures.get(1).unwrap().end();
+
+            let mut params = HashMap::new();
+
+            params.extend({
+                self.capture_names().flat_map(|name| {
+                    name.map(|name| {
+                        (String::from(name), captures.name(name).unwrap().as_str().to_string())
+                    })
+                })
+            });
+
+
+            let mut new_path = (&path[end..]).to_string();
+
+            if new_path.is_empty() || new_path == "/" {
+                new_path = String::from("/");
+            } else {
+                return PathFilterResult::NotMatched;
+            }
+
+            PathFilterResult::Matched(new_path, params)
         } else {
-            slog::debug!(log, "skipping path {}", self);
             PathFilterResult::NotMatched
         }
     }

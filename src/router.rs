@@ -26,20 +26,30 @@ pub type RouterMap = HashMap<String, Route>;
 
 pub enum RouterResult {
     Handled(RouterFuture),
-    Unhandled(Request)
+    Unhandled(Request, HashMap<String, String>)
 }
 
-pub trait Router: Clone {
-    fn handle(&self, req: Request, path: Option<String>) -> RouterResult;
-    /// Returns a tree of routes by filters
-    fn router_map(&self) -> Option<RouterMap> {
-        None
+impl RouterResult {
+    pub fn is_handled(&self) -> bool {
+        match self {
+            RouterResult::Handled(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unhandled(&self) -> bool {
+        match self {
+            RouterResult::Unhandled(_,_) => true,
+            _ => false,
+        }
     }
 }
 
-impl<F: Clone> Router for F where F: Fn(Request) -> RouterResult {
-    fn handle(&self, req: Request, _path: Option<String>) -> RouterResult {
-        self(req)
+pub trait Router: Clone {
+    fn handle(&self, req: Request, path: Option<String>, params: HashMap<String, String>) -> RouterResult;
+    /// Returns a tree of routes by filters
+    fn router_map(&self) -> Option<RouterMap> {
+        None
     }
 }
 

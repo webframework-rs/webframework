@@ -1,15 +1,17 @@
 [package]
 authors = ["Marcel Müller <neikos@neikos.email>"]
-edition = "2018"
-name = "webframework-derive"
-version = "0.0.1"
 description = "You should not use this crate directly, it is internal to Webframework."
+edition = "2018"
 homepage = "https://github.com/webframework-rs/webframework"
-repository = "https://github.com/webframework-rs/webframework"
 license = "MIT"
+name = "webframework-derive"
+repository = "https://github.com/webframework-rs/webframework"
+version = "0.0.1"
 
 [dependencies]
+lazy_static = "1.2.0"
 quote = "0.6.10"
+regex = "1.0.6"
 
 [dependencies.syn]
 features = ["full"]

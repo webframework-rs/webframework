@@ -37,3 +37,28 @@ impl Request {
     }
 }
 
+pub trait FromParameter: Sized {
+    fn from(param: &str) -> crate::WebResult<Self>;
+}
+
+impl FromParameter for String {
+    fn from(param: &str) -> crate::WebResult<Self> {
+        Ok(param.to_string())
+    }
+}
+
+pub trait FromRequest<'a>: Sized {
+    fn from(req: &'a Request) -> crate::WebResult<Self>;
+}
+
+impl<'a> FromRequest<'a> for &'a Request {
+    fn from(req: &Request) -> crate::WebResult<&Request> {
+        Ok(req)
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Fail)]
+pub enum RequestError {
+    #[fail(display = "Could not find required param: _1")]
+    ParamNotFound(String),
+}
