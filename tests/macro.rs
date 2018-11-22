@@ -5,7 +5,6 @@ use crate::wfw::prelude::*;
 use std::collections::HashMap;
 
 use hyper::{Request as HyperRequest, Body};
-use regex::Regex;
 use slog;
 use uuid;
 
@@ -58,4 +57,26 @@ fn check_routing() {
 
     let req = new_request("/bar/foo/nope");
     assert!(router.handle(req, None, HashMap::new()).is_unhandled());
+}
+
+#[controller]
+#[params="test"]
+fn dynamic(test: String)-> WebResult<Response> {
+    assert_eq!(test, "foo");
+
+    Ok(Response::from_string(""))
+}
+
+routing! {
+    DynamicRouter => {
+        GET "/bar/:test" => dynamic;
+    }
+}
+
+#[test]
+fn check_dynamic() {
+    let router = DynamicRouter;
+
+    let req = new_request("/bar/foo");
+    assert!(router.handle(req, None, HashMap::new()).is_handled());
 }
