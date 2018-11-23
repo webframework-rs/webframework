@@ -23,12 +23,12 @@ fn about() -> WebResponse {
 
 #[controller]
 fn create_task() -> WebResponse {
-    Ok(Response::from_string("Hello World!"))
+    Ok(Response::from_string("You can create a task here"))
 }
 
 #[controller]
 fn new_task() -> WebResponse {
-    Ok(Response::from_string("Hello World!"))
+    Ok(Response::from_string("You can find a new task here"))
 }
 
 #[controller]

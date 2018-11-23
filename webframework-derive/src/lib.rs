@@ -99,18 +99,6 @@ struct Routing {
 }
 
 
-/// This parses things like:
-/// ```
-/// routing! {
-///     TaskRouter => {
-///         POST "/create" => create_task;
-///         GET "/" => {
-///             html => tasks;
-///             json => tasks_json;
-///         };
-///     }
-/// }
-/// ```
 impl Parse for Routing {
     fn parse(input: ParseStream) -> SynResult<Self> {
         let visibility: Visibility = input.parse()?;
