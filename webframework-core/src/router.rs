@@ -1,5 +1,5 @@
-use crate::request::Request;
 use crate::response::Response;
+use crate::request::Request;
 
 use std::collections::HashMap;
 
@@ -29,6 +29,19 @@ pub enum RouterResult {
     Unhandled(Request, HashMap<String, String>)
 }
 
+pub trait Router: Clone {
+    fn handle(&self, req: Request, path: Option<String>, params: HashMap<String, String>) -> RouterResult;
+    /// Returns a tree of routes by filters
+    fn router_map(&self) -> Option<RouterMap> {
+        None
+    }
+}
+
+pub trait MetaRouter {
+    fn handle(&self, req: Request) -> RouterFuture;
+}
+
+
 impl RouterResult {
     pub fn is_handled(&self) -> bool {
         match self {
@@ -42,23 +55,5 @@ impl RouterResult {
             RouterResult::Unhandled(_,_) => true,
             _ => false,
         }
-    }
-}
-
-pub trait Router: Clone {
-    fn handle(&self, req: Request, path: Option<String>, params: HashMap<String, String>) -> RouterResult;
-    /// Returns a tree of routes by filters
-    fn router_map(&self) -> Option<RouterMap> {
-        None
-    }
-}
-
-pub trait MetaRouter {
-    fn handle(&self, req: Request) -> RouterFuture;
-}
-
-impl<F: Clone> MetaRouter for F where F: Fn(Request) -> RouterFuture {
-    fn handle(&self, req: Request) -> RouterFuture {
-        self(req)
     }
 }

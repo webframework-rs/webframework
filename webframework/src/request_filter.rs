@@ -1,5 +1,6 @@
 #![allow(non_snake_case, non_camel_case_types)]
-use crate::request::Request;
+use webframework_core::request::Request;
+use webframework_core::request_filter::{PathFilter, PathFilterResult};
 
 use std::collections::HashMap;
 
@@ -7,29 +8,26 @@ use http;
 use http::method::Method;
 use regex::Regex;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum PathFilterResult {
-    NotMatched,
-    Matched(String, HashMap<String, String>),
+pub struct PathRegex(Regex);
+
+impl PathRegex {
+    pub fn from_regex(reg: Regex) -> PathRegex {
+        PathRegex(reg)
+    }
 }
 
-pub trait PathFilter {
-    fn handles(&self, req: &Request, path: &str) -> PathFilterResult;
-    fn name(&self) -> String;
-}
-
-impl PathFilter for Regex {
+impl PathFilter for PathRegex {
     fn handles(&self, _req: &Request, path: &str) -> PathFilterResult {
-        let result = self.is_match(path);
+        let result = self.0.is_match(path);
 
         if result {
-            let captures = self.captures(path).unwrap();
+            let captures = self.0.captures(path).unwrap();
             let end = captures.get(1).unwrap().end();
 
             let mut params = HashMap::new();
 
             params.extend({
-                self.capture_names().flat_map(|name| {
+                self.0.capture_names().flat_map(|name| {
                     name.map(|name| {
                         (String::from(name), captures.name(name).unwrap().as_str().to_string())
                     })
@@ -52,21 +50,16 @@ impl PathFilter for Regex {
     }
 
     fn name(&self) -> String {
-        self.to_string()
+        self.0.to_string()
     }
-}
-
-pub trait RequestFilter {
-    fn handles(&self, req: &Request) -> bool;
-    fn description() -> String;
 }
 
 macro_rules! request_filter {
     ( $name:ident, $desc:expr => $req:ident $impl:block ) => {
         pub struct $name;
 
-        impl $crate::request_filters::RequestFilter for $name {
-            fn handles(&self, $req: &$crate::request_filters::Request) -> bool {
+        impl webframework_core::request_filter::RequestFilter for $name {
+            fn handles(&self, $req: &$crate::request_filter::Request) -> bool {
                 let val: bool = $impl;
 
                 if val {

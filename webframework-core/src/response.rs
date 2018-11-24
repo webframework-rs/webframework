@@ -1,16 +1,43 @@
 use crate::WebResult;
-use crate::error::ServiceError;
 
+use failure::{Context, Fail, Compat, Backtrace};
 pub use http::StatusCode;
 use hyper;
 use futures::future::{self, Future};
+
+#[derive(Debug, Fail)]
+enum ResponseErrorKind {
+    #[fail(display = "unknown error")]
+    UnknownError,
+}
+
+#[derive(Debug)]
+struct ResponseError {
+    inner: Context<ResponseErrorKind>,
+}
+
+impl ::std::fmt::Display for ResponseError {
+    fn fmt(&self, f:  &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::std::fmt::Display::fmt(&self.inner, f)
+    }
+}
+
+impl Fail for ResponseError {
+    fn cause(&self) -> Option<&Fail> {
+        self.inner.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.inner.backtrace()
+    }
+}
 
 enum ResponseBody {
     Text(String),
 }
 
 impl ResponseBody {
-    fn as_bytes_fut(self) -> impl Future<Item = Vec<u8>, Error = ServiceError> {
+    fn as_bytes_fut(self) -> impl Future<Item = Vec<u8>, Error = Compat<ResponseError>> {
         match self {
             ResponseBody::Text(s) => future::ok(s.into_bytes()),
         }

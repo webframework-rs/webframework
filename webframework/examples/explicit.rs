@@ -5,8 +5,8 @@ extern crate regex;
 
 use crate::wfw::prelude::*;
 
-#[meta_controller]
-fn handle404(req: Request) -> WebResponse {
+#[controller]
+fn handle404(req: &Request) -> WebResponse {
     Ok(Response::from_string(format!("Could not find path {}", req.uri().path()))
         .with_status(StatusCode::NOT_FOUND))
 }
@@ -41,8 +41,7 @@ fn tasks_json() -> WebResponse {
     Ok(Response::from_string("{msg: \"List of tasks\"}"))
 }
 
-#[controller]
-#[params="test"]
+#[controller(params = "test")]
 fn dynamic_path(test: String) -> WebResponse {
     Ok(Response::from_string(format!("Dynamic segment was: {}", test)))
 }

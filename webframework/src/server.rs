@@ -1,13 +1,14 @@
-use crate::WebResult;
-use crate::router::{Router, RouterResult};
-use crate::request::Request;
 use crate::error::{ServiceError, ServiceErrorKind};
+
+use webframework_core::WebResult;
+use webframework_core::request::Request;
+use webframework_core::router::{Router, RouterResult};
 
 use std::net::SocketAddr;
 use std::time::Instant;
 use std::collections::HashMap;
 
-use failure;
+use failure::{self, Compat, Fail};
 use futures::future::{self, Future, FutureResult};
 use uuid::Uuid;
 use slog::{Drain, Logger};
@@ -20,8 +21,8 @@ struct ServiceCreator<S: Router> {
 impl<S: Router + 'static + Send> hyper::service::NewService for ServiceCreator<S> {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = ServiceError;
-    type InitError = ServiceError;
+    type Error = Compat<ServiceError>;
+    type InitError = Compat<ServiceError>;
     type Service = Service<S>;
     type Future = FutureResult<Self::Service, Self::InitError>;
 
@@ -41,7 +42,7 @@ struct Service<S: Router> {
 impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
-    type Error = ServiceError;
+    type Error = Compat<ServiceError>;
     type Future = Box<dyn Future<Item = hyper::Response<Self::ResBody>, Error = Self::Error> + Send>;
 
     fn call(&mut self, req: hyper::Request<hyper::Body>) -> Self::Future {
@@ -58,11 +59,13 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                 Box::new(resp.and_then(|resp| {
                     resp.as_response()
                 }).or_else(|e: failure::Error| {
-                    future::err(e.context(ServiceErrorKind::RequestError).into())
+                    let error: ServiceError = e.context(ServiceErrorKind::RequestError).into();
+                    future::err(error.compat())
                 }))
             }
             RouterResult::Unhandled(_, _) => {
-                Box::new(future::err(ServiceErrorKind::RequestError.into()))
+                let error: ServiceError = ServiceErrorKind::RequestError.into();
+                Box::new(future::err(error.compat()))
             }
         };
 
@@ -70,7 +73,7 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
             let elapsed = now.elapsed();
             let time: f64 = elapsed.as_secs() as f64 * 1000.0 + elapsed.subsec_nanos() as f64 / 1_000_000.0;
             slog::info!(time_logger, "Handled in {}ms", time; "elapsed_time" => time);
-            future::result(resp)
+            resp
         }))
     }
 }

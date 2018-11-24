@@ -1,5 +1,7 @@
 [workspace]
 members = [
     "webframework",
+    "webframework-core",
     "webframework-derive",
+    "webframework-template",
 ]

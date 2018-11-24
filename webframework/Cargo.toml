@@ -31,6 +31,11 @@ slog-term = "2.4.0"
 features = ["v4"]
 version = "0.7"
 
+[dependencies.webframework-core]
+optional = false
+path = "../webframework-core/"
+version = "0.0.1"
+
 [dependencies.webframework-derive]
 optional = false
 path = "../webframework-derive"

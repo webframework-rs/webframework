@@ -1,17 +1,27 @@
-use failure::{Context, Fail};
+use failure::{Context, Fail, Backtrace};
 use std::fmt::{self, Display};
+
+#[derive(Copy, Clone, Debug, Fail)]
+pub enum ServiceErrorKind {
+    #[fail(display = "An Error spawning a new service")]
+    ServiceCreation,
+    #[fail(display = "An Error during handling a request")]
+    RequestError,
+}
 
 #[derive(Debug)]
 pub struct ServiceError {
     inner: Context<ServiceErrorKind>,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
-pub enum ServiceErrorKind {
-    #[fail(display = "An Error spawning a new service")]
-    ServiceCreation,
-    #[fail(display = "An Error during handling a request")]
-    RequestError,
+impl Fail for ServiceError {
+    fn cause(&self) -> Option<&Fail> {
+        self.inner.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.inner.backtrace()
+    }
 }
 
 impl ServiceError {
@@ -37,6 +47,3 @@ impl Display for ServiceError {
         Display::fmt(&self.inner, f)
     }
 }
-
-impl std::error::Error for ServiceError {}
-

@@ -1,0 +1,13 @@
+[package]
+authors = ["Marcel Müller <neikos@neikos.email>"]
+edition = "2018"
+name = "webframework-core"
+version = "0.0.1"
+
+[dependencies]
+failure = "0.1.3"
+futures = "0.1.25"
+http = "0.1.14"
+hyper = "0.12.16"
+slog = "2.4.1"
+uuid = "0.7.1"
