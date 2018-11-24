@@ -70,6 +70,9 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
             fn handle(&self, mut req: ::webframework_core::request::Request,
                       path: Option<String>, params: ::std::collections::HashMap<String, String>)
                 -> ::webframework_core::router::RouterResult {
+                if path.is_some() && path != Some("/".into()) {
+                    return ::webframework_core::router::RouterResult::Unhandled(req, params);
+                }
                 let result = ||{
                     #(#input_tokens)*;
                     #(#param_tokens)*;

@@ -39,8 +39,6 @@ impl PathFilter for PathRegex {
 
             if new_path.is_empty() || new_path == "/" {
                 new_path = String::from("/");
-            } else {
-                return PathFilterResult::NotMatched;
             }
 
             PathFilterResult::Matched(new_path, params)
@@ -61,11 +59,6 @@ macro_rules! request_filter {
         impl webframework_core::request_filter::RequestFilter for $name {
             fn handles(&self, $req: &$crate::request_filter::Request) -> bool {
                 let val: bool = $impl;
-
-                if val {
-                    let log = $req.log();
-                    slog::debug!(log, "filtered by {}", stringify!($name);"request_filter" => stringify!($name));
-                }
 
                 return val;
             }
@@ -90,7 +83,7 @@ request_filter! {
 }
 
 request_filter! {
-    delegate, "Delegates to the next filter or router" => req {
+    delegate, "Delegates to the next filter or router" => _req {
         true
     }
 }

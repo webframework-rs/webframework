@@ -59,8 +59,7 @@ fn check_routing() {
     assert!(router.handle(req, None, HashMap::new()).is_unhandled());
 }
 
-#[controller]
-#[params="test"]
+#[controller(params = "test")]
 fn dynamic(test: String)-> WebResult<Response> {
     assert_eq!(test, "foo");
 

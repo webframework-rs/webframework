@@ -72,7 +72,17 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
         Box::new(ret.then(move |resp| {
             let elapsed = now.elapsed();
             let time: f64 = elapsed.as_secs() as f64 * 1000.0 + elapsed.subsec_nanos() as f64 / 1_000_000.0;
-            slog::info!(time_logger, "Handled in {}ms", time; "elapsed_time" => time);
+
+            let mut status = None;
+
+            match &resp {
+                Ok(resp) => {
+                    status = Some(resp.status().as_u16());
+                }
+                Err(_) => (),
+            }
+
+            slog::debug!(time_logger, "Handled in {}ms", time; "elapsed_time" => time, "status" => status);
             resp
         }))
     }
