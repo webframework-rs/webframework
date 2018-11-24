@@ -2,6 +2,7 @@ use crate::error::{ServiceError, ServiceErrorKind};
 
 use webframework_core::WebResult;
 use webframework_core::request::Request;
+use webframework_core::response::Response;
 use webframework_core::router::{Router, RouterResult};
 
 use std::net::SocketAddr;
@@ -63,13 +64,18 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                     future::err(error.compat())
                 }))
             }
-            RouterResult::Unhandled(_, _) => {
-                let error: ServiceError = ServiceErrorKind::RequestError.into();
+            RouterResult::Unhandled(req, _) => {
+                let error: ServiceError = ServiceErrorKind::UnhandledError(req.path().to_string()).into();
                 Box::new(future::err(error.compat()))
             }
         };
 
-        Box::new(ret.then(move |resp| {
+        Box::new(ret.or_else(|err| {
+            let service_error = err.get_ref();
+            let resp = Response::from_string(crate::templates::error_page(service_error))
+                .with_status(hyper::StatusCode::INTERNAL_SERVER_ERROR);
+            Ok(resp.as_response().unwrap())
+        }).then(move |resp| {
             let elapsed = now.elapsed();
             let time: f64 = elapsed.as_secs() as f64 * 1000.0 + elapsed.subsec_nanos() as f64 / 1_000_000.0;
 
@@ -79,7 +85,7 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                 Ok(resp) => {
                     status = Some(resp.status().as_u16());
                 }
-                Err(_) => (),
+                _ => (),
             }
 
             slog::debug!(time_logger, "Handled in {}ms", time; "elapsed_time" => time, "status" => status);

@@ -24,6 +24,10 @@ impl Request {
         self.req.uri()
     }
 
+    pub fn path(&self) -> &str {
+        self.req.uri().path()
+    }
+
     pub fn method(&self) -> &Method {
         self.req.method()
     }

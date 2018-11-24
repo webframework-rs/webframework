@@ -1,7 +1,0 @@
-[package]
-name = "webframework-template"
-version = "0.0.2"
-authors = ["Marcel Müller <neikos@neikos.email>"]
-edition = "2018"
-
-[dependencies]

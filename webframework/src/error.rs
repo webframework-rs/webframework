@@ -1,12 +1,14 @@
 use failure::{Context, Fail, Backtrace};
 use std::fmt::{self, Display};
 
-#[derive(Copy, Clone, Debug, Fail)]
+#[derive(Clone, Debug, Fail)]
 pub enum ServiceErrorKind {
     #[fail(display = "An Error spawning a new service")]
     ServiceCreation,
     #[fail(display = "An Error during handling a request")]
     RequestError,
+    #[fail(display = "Unhandled request for path: {}", _0)]
+    UnhandledError(String),
 }
 
 #[derive(Debug)]
@@ -26,7 +28,7 @@ impl Fail for ServiceError {
 
 impl ServiceError {
     pub fn kind(&self) -> ServiceErrorKind {
-        *self.inner.get_context()
+        self.inner.get_context().clone()
     }
 }
 
