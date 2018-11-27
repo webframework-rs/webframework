@@ -1,0 +1,5 @@
+CREATE TABLE tasks (
+    id INT PRIMARY KEY NOT NULL,
+    name VARCHAR NOT NULL,
+    done BOOLEAN NOT NULL
+);
