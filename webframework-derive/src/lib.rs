@@ -7,7 +7,8 @@ extern crate lazy_static;
 use crate::proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream, Result as SynResult};
-use syn::{parse_macro_input, braced, ItemFn, Ident, Token, LitStr,
+use syn::spanned::Spanned;
+use syn::{parse_macro_input, braced, ItemFn, Ident, Token, LitStr, Path,
     Visibility, Meta, Lit, FnArg, Pat, ArgCaptured, PatIdent, NestedMeta, MetaList, AttributeArgs};
 use syn::token::Brace;
 use syn::punctuated::Punctuated;
@@ -44,7 +45,7 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
         .filter(|(_ty, input)| params.iter().find(|&param| *param == input.to_string()).is_none())
         .map(|(ty, input)| {
             quote! {
-                let #input: #ty = ::webframework_core::request::FromRequest::from(&req)?;
+                let #input: #ty = ::webframework_core::request::FromRequest::from_request(&req)?;
             }
         }).collect();
 
@@ -58,7 +59,7 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
                     Some(p) => p,
                     None => Err(::webframework_core::request::RequestError::ParamNotFound(String::from(#param)))?,
                 };
-                let #ident: #ty = ::webframework_core::request::FromParameter::from(param)?;
+                let #ident: #ty = ::webframework_core::request::FromParameter::from_parameter(param)?;
             }
         }).collect();;
 
@@ -73,13 +74,13 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
                 if path.is_some() && path != Some("/".into()) {
                     return ::webframework_core::router::RouterResult::Unhandled(req, params);
                 }
-                let result = ||{
+                let result = || -> ::webframework_core::WebResult<_> {
                     #(#input_tokens)*;
                     #(#param_tokens)*;
                     #block
                 };
                 ::webframework_core::router::RouterResult::Handled(
-                    Box::new(::futures::future::result(result()))
+                    Box::new(::futures::future::result(result().map(Into::into)))
                 )
             }
         }
@@ -107,13 +108,13 @@ impl Parse for Routing {
 
 struct InnerRoute {
     restrictions: Vec<Ident>,
-    controller: Ident,
+    controller: Path,
 }
 
 enum InnerRouteKind {
     Multiple(Punctuated<InnerRoute, Token![;]>),
-    Single(Ident),
-    Meta(Ident, Ident),
+    Single(Path),
+    Meta(Ident, Path),
 }
 
 struct Route {
@@ -128,7 +129,7 @@ impl Parse for Route {
             input.parse::<Token![>>]>()?;
             let name: Ident = input.parse()?;
             input.parse::<Token![=>]>()?;
-            let controller: Ident = input.parse()?;
+            let controller: Path = input.parse()?;
             return Ok( Route { restrictions: vec![], path: None,
                 kind: InnerRouteKind::Meta(name, controller) } );
         }
@@ -151,14 +152,14 @@ impl Parse for Route {
                     return Err(input.error("you need to specify at least one filter"));
                 }
                 input.parse::<Token![=>]>()?;
-                let controller: Ident = input.parse()?;
+                let controller: Path = input.parse()?;
                 Ok(InnerRoute { restrictions, controller })
             };
 
             let inner_items: Punctuated<InnerRoute, Token![;]> = content.parse_terminated(inner_item)?;
             return Ok(Route { restrictions, path, kind: InnerRouteKind::Multiple(inner_items) });
         } else {
-            let inner_item: Ident = input.parse()?;
+            let inner_item: Path = input.parse()?;
             return Ok(Route { restrictions, path, kind: InnerRouteKind::Single(inner_item) });
         }
     }
@@ -268,7 +269,7 @@ pub fn routing(input: TokenStream) -> TokenStream {
                         quote! {
                             #assert_router
 
-                            match ::webframework_core::router::Router::handle(&#ctrl, req, Some(path.clone()), params) {
+                            match ::webframework_core::router::Router::handle(&#ctrl, req, None, params) {
                                 ::webframework_core::router::RouterResult::Handled(resp) => {
                                     return ::webframework_core::router::RouterResult::Handled(resp);
                                 }

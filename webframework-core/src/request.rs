@@ -42,21 +42,21 @@ impl Request {
 }
 
 pub trait FromParameter: Sized {
-    fn from(param: &str) -> crate::WebResult<Self>;
+    fn from_parameter(param: &str) -> crate::WebResult<Self>;
 }
 
 impl FromParameter for String {
-    fn from(param: &str) -> crate::WebResult<Self> {
+    fn from_parameter(param: &str) -> crate::WebResult<Self> {
         Ok(param.to_string())
     }
 }
 
 pub trait FromRequest<'a>: Sized {
-    fn from(req: &'a Request) -> crate::WebResult<Self>;
+    fn from_request(req: &'a Request) -> crate::WebResult<Self>;
 }
 
 impl<'a> FromRequest<'a> for &'a Request {
-    fn from(req: &Request) -> crate::WebResult<&Request> {
+    fn from_request(req: &Request) -> crate::WebResult<&Request> {
         Ok(req)
     }
 }

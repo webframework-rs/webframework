@@ -23,6 +23,7 @@ routing! {
 routing! {
     NestedRouter => {
         GET "/foo" => SimpleRouter;
+        >> NotFound => handle_it;
     }
 }
 
@@ -39,9 +40,15 @@ fn nested_dynamic() {
     let router = NestedRouter;
 
     for path in &["/foo", "/foo/", "/foo/bar/blah"] {
-        println!("Testing {}", path);
         let req = new_request(&path);
         assert!(router.handle(req, None, HashMap::new()).is_handled());
     }
 }
 
+#[test]
+fn nested_not_found() {
+    let router = NestedRouter;
+
+    let req = new_request("/foo/not_found");
+    assert!(router.handle(req, None, HashMap::new()).is_handled());
+}

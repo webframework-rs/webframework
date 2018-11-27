@@ -79,3 +79,14 @@ impl Response {
     }
 }
 
+impl<'a> From<&'a str> for Response {
+    fn from(s: &'a str) -> Response {
+        Response::from_string(s)
+    }
+}
+
+impl From<String> for Response {
+    fn from(s: String) -> Response {
+        Response::from_string(s)
+    }
+}
