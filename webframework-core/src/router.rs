@@ -3,11 +3,11 @@ use crate::request::Request;
 
 use std::collections::HashMap;
 
-use failure::Error;
+use failure::{Error, Context, Compat};
 use futures::Future;
 use http;
 
-pub type RouterFuture = Box<dyn Future<Item = Response, Error = Error> + Send>;
+pub type RouterFuture = Box<dyn Future<Item = Response, Error = Compat<RouterError>> + Send>;
 
 #[derive(Debug, Clone)]
 pub struct RouteDetail {
@@ -37,11 +37,6 @@ pub trait Router: Clone {
     }
 }
 
-pub trait MetaRouter {
-    fn handle(&self, req: Request) -> RouterFuture;
-}
-
-
 impl RouterResult {
     pub fn is_handled(&self) -> bool {
         match self {
@@ -57,3 +52,16 @@ impl RouterResult {
         }
     }
 }
+
+#[derive(Clone, Eq, PartialEq, Debug, Fail)]
+pub enum RouterErrorKind {
+    #[fail(display="an error occured while handling request")]
+    InnerError,
+}
+
+#[derive(Debug)]
+pub struct RouterError {
+    inner: Context<RouterErrorKind>,
+}
+
+impl_fail_boilerplate!(RouterErrorKind, RouterError);

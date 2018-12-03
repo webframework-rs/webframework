@@ -91,7 +91,7 @@ request_filter! {
 request_filter! {
     html, "Requires the client to request HTML" => req {
         let _html_type = "text/html";
-        let client_accept = req.inner_req().headers().get(http::header::ACCEPT);
+        let client_accept = req.headers().get(http::header::ACCEPT);
         if let Some(_header) = client_accept {
             false
         } else {

@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use std::time::Instant;
 use std::collections::HashMap;
 
-use failure::{self, Compat, Fail};
+use failure::{Compat, Fail};
 use futures::future::{self, Future, FutureResult};
 use uuid::Uuid;
 use slog::{Drain, Logger};
@@ -53,29 +53,39 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                                                    "id" => string_id.clone()));
         let time_logger = self.logger.new(slog::o!("path" => req.uri().path().to_string(),
                                                    "id" => string_id.clone()));
-        let request = Request::from_req(id, new_logger, req);
         let now = Instant::now();
-        let ret : Box<dyn Future<Item = _, Error = _> + Send> = match self.router.handle(request, None, HashMap::new()) {
-            RouterResult::Handled(resp) => {
-                Box::new(resp.and_then(|resp| {
-                    resp.as_response()
-                }).or_else(|e: failure::Error| {
-                    let error: ServiceError = e.context(ServiceErrorKind::RequestError).into();
-                    future::err(error.compat())
-                }))
-            }
-            RouterResult::Unhandled(req, _) => {
-                let error: ServiceError = ServiceErrorKind::UnhandledError(req.path().to_string()).into();
-                Box::new(future::err(error.compat()))
-            }
-        };
+        let request = Request::from_req(id, new_logger, req);
+        let router = self.router.clone();
 
-        Box::new(ret.or_else(|err| {
+        Box::new(request.map_err(|e| {
+            let error: ServiceError = e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
+            return error.compat();
+        }).and_then(move |req| {
+            use futures::future::Either;
+
+            match router.handle(req, None, HashMap::new()) {
+                RouterResult::Handled(resp) => {
+                    return Either::A(resp.map_err(|e| {
+                        let error: ServiceError =
+                            e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
+                        return error.compat();
+                    }).map(Response::as_response).flatten().map_err(|e| {
+                        let error: ServiceError =
+                            e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
+                        return error.compat();
+                    }));
+                }
+                RouterResult::Unhandled(req, _) => {
+                    let error: ServiceError = ServiceErrorKind::UnhandledError(req.path().to_string()).into();
+                    return Either::B(future::err(error.compat()));
+                }
+            }
+        }).or_else(|err| {
             let service_error = err.get_ref();
             let resp = Response::from_string(crate::templates::error_page(service_error))
                 .with_status(hyper::StatusCode::INTERNAL_SERVER_ERROR);
-            Ok(resp.as_response().unwrap())
-        }).then(move |resp| {
+            future::ok(resp.as_response().unwrap())
+        }).then(move |resp: Result<hyper::Response<hyper::Body>, _>| {
             let elapsed = now.elapsed();
             let time: f64 = elapsed.as_secs() as f64 * 1000.0 + elapsed.subsec_nanos() as f64 / 1_000_000.0;
 

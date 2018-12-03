@@ -8,8 +8,8 @@ use crate::proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::parse::{Parse, ParseStream, Result as SynResult};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, braced, ItemFn, Ident, Token, LitStr, Path,
-    Visibility, Meta, Lit, FnArg, Pat, ArgCaptured, PatIdent, NestedMeta, MetaList, AttributeArgs};
+use syn::{parse_macro_input, braced, ItemFn, Ident, Token, LitStr, Path, Visibility, Meta, Lit,
+FnArg, Pat, ArgCaptured, PatIdent, NestedMeta, AttributeArgs};
 use syn::token::Brace;
 use syn::punctuated::Punctuated;
 use regex::Regex;
@@ -44,7 +44,7 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
     let input_tokens: Vec<_> = inputs.iter()
         .filter(|(_ty, input)| params.iter().find(|&param| *param == input.to_string()).is_none())
         .map(|(ty, input)| {
-            quote! {
+            quote_spanned! {ty.span() =>
                 let #input: #ty = ::webframework_core::request::FromRequest::from_request(&req)?;
             }
         }).collect();

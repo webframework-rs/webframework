@@ -1,35 +1,53 @@
 use hyper::{self, Body, Uri};
 use http::method::Method;
+use http::request::Parts;
+use http::header::{HeaderMap, HeaderValue};
 use slog::Logger;
 use uuid::Uuid;
+use futures::{Future, Stream};
+use bytes::Bytes;
+use failure::{Fail, Context};
 
+#[derive(Debug)]
 pub struct Request {
     id: Uuid,
     log: Logger,
-    req: hyper::Request<Body>,
+    body: Bytes,
+    parts: Parts,
 }
 
 impl Request {
-    pub fn from_req(id: Uuid, log: Logger, req: hyper::Request<Body>) -> Request {
-        Request {
-            id, log, req
-        }
-    }
+    pub fn from_req(id: Uuid, log: Logger, req: hyper::Request<Body>)
+        -> impl Future<Item = Request, Error = failure::Compat<RequestError>> + Send + Sync + Sized
+    {
+        let (parts, body) = req.into_parts();
 
-    pub fn inner_req(&self) -> &hyper::Request<Body> {
-        &self.req
+        body.concat2().and_then(move |body| {
+            let body = body.into_bytes();
+
+            futures::future::ok(Request {
+                id, log, body, parts
+            })
+        }).map_err(|e| {
+            let err: RequestError = e.context(RequestErrorKind::BodyParseError).into();
+            err.compat()
+        })
     }
 
     pub fn uri(&self) -> &Uri {
-        self.req.uri()
+        &self.parts.uri
     }
 
     pub fn path(&self) -> &str {
-        self.req.uri().path()
+        self.parts.uri.path()
     }
 
     pub fn method(&self) -> &Method {
-        self.req.method()
+        &self.parts.method
+    }
+
+    pub fn headers(&self) -> &HeaderMap<HeaderValue> {
+        &self.parts.headers
     }
 
     pub fn log(&self) -> &Logger {
@@ -62,7 +80,16 @@ impl<'a> FromRequest<'a> for &'a Request {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Fail)]
-pub enum RequestError {
+pub enum RequestErrorKind {
     #[fail(display = "Could not find required param: _1")]
     ParamNotFound(String),
+    #[fail(display="could not parse the body")]
+    BodyParseError
 }
+
+#[derive(Debug)]
+pub struct RequestError {
+    inner: Context<RequestErrorKind>,
+}
+
+impl_fail_boilerplate!(RequestErrorKind, RequestError);

@@ -19,8 +19,8 @@ impl Task {
     }
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Deserialize)]
 #[table_name = "tasks"]
-pub struct NewPost<'a> {
-    pub name: &'a str,
+pub struct NewTask {
+    pub name: String,
 }

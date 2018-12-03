@@ -9,6 +9,8 @@ pub enum ServiceErrorKind {
     RequestError,
     #[fail(display = "Unhandled request for path: {}", _0)]
     UnhandledError(String),
+    #[fail(display = "Internal Error")]
+    InternalError,
 }
 
 #[derive(Debug)]
