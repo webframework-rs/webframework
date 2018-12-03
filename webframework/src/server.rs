@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use std::time::Instant;
 use std::collections::HashMap;
 
-use failure::{Compat, Fail};
+use failure::{Compat, Fail, Error};
 use futures::future::{self, Future, FutureResult};
 use uuid::Uuid;
 use slog::{Drain, Logger};
@@ -57,32 +57,20 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
         let request = Request::from_req(id, new_logger, req);
         let router = self.router.clone();
 
-        Box::new(request.map_err(|e| {
-            let error: ServiceError = e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
-            return error.compat();
-        }).and_then(move |req| {
+        Box::new(request.and_then(move |req| {
             use futures::future::Either;
 
             match router.handle(req, None, HashMap::new()) {
                 RouterResult::Handled(resp) => {
-                    return Either::A(resp.map_err(|e| {
-                        let error: ServiceError =
-                            e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
-                        return error.compat();
-                    }).map(Response::as_response).flatten().map_err(|e| {
-                        let error: ServiceError =
-                            e.context(ServiceErrorKind::UnhandledError(req.uri().path().to_string())).into();
-                        return error.compat();
-                    }));
+                    return Either::A(resp.map(Response::as_response).flatten());
                 }
                 RouterResult::Unhandled(req, _) => {
-                    let error: ServiceError = ServiceErrorKind::UnhandledError(req.path().to_string()).into();
-                    return Either::B(future::err(error.compat()));
+                    let error = ServiceErrorKind::UnhandledError(req.path().to_string()).into();
+                    return Either::B(future::err(error));
                 }
             }
-        }).or_else(|err| {
-            let service_error = err.get_ref();
-            let resp = Response::from_string(crate::templates::error_page(service_error))
+        }).or_else(|err: Error| {
+            let resp = Response::from_string(crate::templates::error_page(&err.compat()))
                 .with_status(hyper::StatusCode::INTERNAL_SERVER_ERROR);
             future::ok(resp.as_response().unwrap())
         }).then(move |resp: Result<hyper::Response<hyper::Body>, _>| {

@@ -7,7 +7,7 @@ use failure::{Error, Context, Compat};
 use futures::Future;
 use http;
 
-pub type RouterFuture = Box<dyn Future<Item = Response, Error = Compat<RouterError>> + Send>;
+pub type RouterFuture = Box<dyn Future<Item = Response, Error = Error> + Send>;
 
 #[derive(Debug, Clone)]
 pub struct RouteDetail {

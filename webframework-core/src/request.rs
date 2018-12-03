@@ -6,7 +6,7 @@ use slog::Logger;
 use uuid::Uuid;
 use futures::{Future, Stream};
 use bytes::Bytes;
-use failure::{Fail, Context};
+use failure::{Fail, Context, Error};
 
 #[derive(Debug)]
 pub struct Request {
@@ -18,7 +18,7 @@ pub struct Request {
 
 impl Request {
     pub fn from_req(id: Uuid, log: Logger, req: hyper::Request<Body>)
-        -> impl Future<Item = Request, Error = failure::Compat<RequestError>> + Send + Sync + Sized
+        -> impl Future<Item = Request, Error = Error> + Send + Sized
     {
         let (parts, body) = req.into_parts();
 
@@ -28,10 +28,7 @@ impl Request {
             futures::future::ok(Request {
                 id, log, body, parts
             })
-        }).map_err(|e| {
-            let err: RequestError = e.context(RequestErrorKind::BodyParseError).into();
-            err.compat()
-        })
+        }).map_err(|e| e.context(RequestErrorKind::BodyParseError).into())
     }
 
     pub fn uri(&self) -> &Uri {

@@ -1,9 +1,10 @@
 use crate::WebResult;
 
-use failure::{Context, Fail, Compat, Backtrace};
+use failure::{Context, Fail, Compat, Backtrace, Error};
 pub use http::StatusCode;
 use hyper;
 use futures::future::{self, Future};
+use futures::Stream;
 
 #[derive(Debug, Fail)]
 enum ResponseErrorKind {
@@ -37,7 +38,7 @@ enum ResponseBody {
 }
 
 impl ResponseBody {
-    fn as_bytes_fut(self) -> impl Future<Item = Vec<u8>, Error = Compat<ResponseError>> {
+    fn as_bytes_fut(self) -> impl Future<Item = Vec<u8>, Error = Error> {
         match self {
             ResponseBody::Text(s) => future::ok(s.into_bytes()),
         }
@@ -72,7 +73,9 @@ impl Response {
         }
 
         if let Some(body) = self.body {
-            Ok(resp.body(hyper::Body::wrap_stream(body.as_bytes_fut().into_stream()))?)
+            Ok(resp.body(hyper::Body::wrap_stream(body.as_bytes_fut().into_stream().map_err(|e| {
+                e.compat()
+            })))?)
         } else {
             Ok(resp.body(hyper::Body::empty())?)
         }
