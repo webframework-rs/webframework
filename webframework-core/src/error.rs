@@ -13,7 +13,7 @@ macro_rules! impl_fail_boilerplate {
 
         impl $error {
             pub fn kind(&self) -> $kind {
-                self.inner.get_context().clone()
+                self.inner.get_context().to_owned()
             }
         }
 

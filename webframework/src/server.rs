@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use std::time::Instant;
 use std::collections::HashMap;
 
-use failure::{Compat, Fail, Error};
+use failure::{Compat, Error};
 use futures::future::{self, Future, FutureResult};
 use uuid::Uuid;
 use slog::{Drain, Logger};

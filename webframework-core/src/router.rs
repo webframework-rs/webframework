@@ -3,7 +3,7 @@ use crate::request::Request;
 
 use std::collections::HashMap;
 
-use failure::{Error, Context, Compat};
+use failure::{Error, Context};
 use futures::Future;
 use http;
 

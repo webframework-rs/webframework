@@ -1,37 +1,25 @@
 use crate::WebResult;
 
-use failure::{Context, Fail, Compat, Backtrace, Error};
+use failure::{Context, Fail, Error};
 pub use http::StatusCode;
 use hyper;
 use futures::future::{self, Future};
 use futures::Stream;
 
-#[derive(Debug, Fail)]
-enum ResponseErrorKind {
+#[derive(Debug, Fail, Clone)]
+pub enum ResponseErrorKind {
     #[fail(display = "unknown error")]
     UnknownError,
+    #[fail(display = "an error occurred with the inner Body type")]
+    BodyError,
 }
 
 #[derive(Debug)]
-struct ResponseError {
+pub struct ResponseError {
     inner: Context<ResponseErrorKind>,
 }
 
-impl ::std::fmt::Display for ResponseError {
-    fn fmt(&self, f:  &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::std::fmt::Display::fmt(&self.inner, f)
-    }
-}
-
-impl Fail for ResponseError {
-    fn cause(&self) -> Option<&Fail> {
-        self.inner.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
-    }
-}
+impl_fail_boilerplate!(ResponseErrorKind, ResponseError);
 
 enum ResponseBody {
     Text(String),
@@ -74,7 +62,7 @@ impl Response {
 
         if let Some(body) = self.body {
             Ok(resp.body(hyper::Body::wrap_stream(body.as_bytes_fut().into_stream().map_err(|e| {
-                e.compat()
+                e.context(ResponseErrorKind::BodyError).compat()
             })))?)
         } else {
             Ok(resp.body(hyper::Body::empty())?)
