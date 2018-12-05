@@ -19,15 +19,15 @@ struct ServiceCreator<S: Router> {
     router: S,
 }
 
-impl<S: Router + 'static + Send> hyper::service::NewService for ServiceCreator<S> {
+impl<S: Router + 'static + Send, Ctx> hyper::service::MakeService<Ctx> for ServiceCreator<S> {
     type ReqBody = hyper::Body;
     type ResBody = hyper::Body;
     type Error = Compat<ServiceError>;
-    type InitError = Compat<ServiceError>;
     type Service = Service<S>;
-    type Future = FutureResult<Self::Service, Self::InitError>;
+    type Future = FutureResult<Self::Service, Self::Error>;
+    type MakeError = Compat<ServiceError>;
 
-    fn new_service(&self) -> Self::Future {
+    fn make_service(&mut self, _: Ctx) -> Self::Future {
         future::ok(Service {
             logger: self.logger.new(slog::o!()),
             router: self.router.clone(),
