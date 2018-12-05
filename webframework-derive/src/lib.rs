@@ -57,7 +57,7 @@ pub fn controller(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 let param = match params.get(&String::from(#param)) {
                     Some(p) => p,
-                    None => Err(::webframework_core::request::RequestError::ParamNotFound(String::from(#param)))?,
+                    None => Err(::webframework_core::request::RequestErrorKind::ParamNotFound(String::from(#param)))?,
                 };
                 let #ident: #ty = ::webframework_core::request::FromParameter::from_parameter(param)?;
             }

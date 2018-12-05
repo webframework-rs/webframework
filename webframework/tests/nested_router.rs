@@ -28,11 +28,13 @@ routing! {
 }
 
 fn new_request(path: &str) -> Request {
+    use futures::Future;
+
     let req = HyperRequest::get(path).body(Body::empty()).unwrap();
     let logger = slog::Logger::root(slog::Discard, slog::o!());
     let id = uuid::Uuid::new_v4();
 
-    Request::from_req(id, logger, req)
+    Request::from_req(id, logger, req).wait().unwrap()
 }
 
 #[test]
