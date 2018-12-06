@@ -12,7 +12,7 @@ pub fn error_page(error: &Fail) -> String {
                 @ if cfg!(debug_assertions) {
                     h1: error.to_string();
                     ol {
-                        @ for fail in error.iter_chain() {
+                        @ for fail in error.iter_causes() {
                             li: fail.to_string();
                         }
                     }
