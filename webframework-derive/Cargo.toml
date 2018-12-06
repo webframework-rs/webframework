@@ -6,7 +6,7 @@ homepage = "https://github.com/webframework-rs/webframework"
 license = "MIT"
 name = "webframework-derive"
 repository = "https://github.com/webframework-rs/webframework"
-version = "0.0.1"
+version = "0.0.2"
 
 [dependencies]
 lazy_static = "1.2.0"

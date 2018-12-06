@@ -1,8 +1,14 @@
 [package]
 authors = ["Marcel Müller <neikos@neikos.email>"]
+categories = ["web-programming"]
+description = "Part of the webframework project. It contains general types that can be used by supporting libraries."
+homepage = "https://github.com/webframework-rs/webframework"
+keywords = ["webframework", "fun"]
+repository = "https://github.com/webframework-rs/webframework"
+license = "MIT"
 edition = "2018"
 name = "webframework-core"
-version = "0.0.1"
+version = "0.0.2"
 
 [dependencies]
 bytes = "0.4.11"
