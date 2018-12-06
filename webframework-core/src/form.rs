@@ -10,6 +10,10 @@ pub enum FormErrorKind {
     DeserializationError,
     #[fail(display = "The Content-Type could not be determined")]
     UnknownContentTypeError,
+    #[fail(display = "The Content-Type is not supported: {}", format)]
+    UnsupportedContentTypeError {
+        format: String
+    },
 }
 
 #[derive(Debug)]
@@ -40,8 +44,8 @@ impl<'a, T: DeserializeOwned> Form<'a, T> {
                   )?)
             }
 
-            _ => {
-                Err(FormErrorKind::UnknownContentTypeError)?
+            kind => {
+                Err(FormErrorKind::UnsupportedContentTypeError{ format: kind.into() })?
             }
         }
     }
