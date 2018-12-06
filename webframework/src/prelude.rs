@@ -8,6 +8,7 @@ pub use webframework_core::request::FromRequest;
 pub use webframework_core::request::FromParameter;
 pub use webframework_core::response::Response;
 pub use webframework_core::response::StatusCode;
+pub use webframework_core::response::Redirect;
 pub use webframework_core::form::Form;
 pub use webframework_core::WebResult;
 pub type WebResponse = WebResult<Response>;

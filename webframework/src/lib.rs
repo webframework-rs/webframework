@@ -1,6 +1,6 @@
 extern crate webframework_derive;
 extern crate webframework_core;
-#[macro_use] extern crate failure;
+extern crate failure;
 extern crate hyper;
 extern crate slog;
 extern crate slog_term;

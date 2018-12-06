@@ -2,6 +2,7 @@ use crate::WebResult;
 
 use failure::{Context, Fail, Error};
 pub use http::StatusCode;
+use http::header::{HeaderMap, HeaderValue, HeaderName};
 use hyper;
 use futures::future::{self, Future};
 use futures::Stream;
@@ -36,6 +37,7 @@ impl ResponseBody {
 pub struct Response {
     status: Option<StatusCode>,
     body: Option<ResponseBody>,
+    headers: HeaderMap,
 }
 
 impl Response {
@@ -43,6 +45,7 @@ impl Response {
         Response {
             status: None,
             body: Some(ResponseBody::Text(cont.to_string())),
+            headers: HeaderMap::new(),
         }
     }
 
@@ -53,11 +56,20 @@ impl Response {
         }
     }
 
+    pub fn with_header(mut self, key: HeaderName, value: HeaderValue) -> Self {
+        self.headers.insert(key, value);
+        self
+    }
+
     pub fn as_response(self) -> WebResult<hyper::Response<hyper::Body>> {
         let mut resp = hyper::Response::builder();
 
         if let Some(status) = self.status {
             resp.status(status);
+        }
+
+        for (k, v) in &self.headers {
+            resp.header(k, v);
         }
 
         if let Some(body) = self.body {
@@ -70,6 +82,14 @@ impl Response {
     }
 }
 
+pub struct Redirect(HeaderValue);
+
+impl Redirect {
+    pub fn from_str(val: &str) -> WebResult<Redirect> {
+        Ok(Redirect(val.parse()?))
+    }
+}
+
 impl<'a> From<&'a str> for Response {
     fn from(s: &'a str) -> Response {
         Response::from_string(s)
@@ -79,5 +99,13 @@ impl<'a> From<&'a str> for Response {
 impl From<String> for Response {
     fn from(s: String) -> Response {
         Response::from_string(s)
+    }
+}
+
+impl From<Redirect> for Response {
+    fn from(r: Redirect) -> Response {
+        Response::from_string("")
+            .with_header("Location".parse().unwrap(), r.0)
+            .with_status(StatusCode::SEE_OTHER)
     }
 }

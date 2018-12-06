@@ -20,6 +20,12 @@ pub fn not_found(req: &Request) -> WebResponse {
 }
 
 #[controller]
-pub fn create_task(new_task: Form<NewTask>) -> WebResponse {
-    Ok( "" )
+pub fn create_task(new_task: Form<NewTask>, db: DB) -> WebResponse {
+    let new_task = new_task.get("task")?;
+
+    Task::create(&db, new_task)?;
+
+    Ok(
+        Redirect::from_str("/")?
+    )
 }

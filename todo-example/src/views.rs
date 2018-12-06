@@ -19,7 +19,11 @@ fn layout<I: Render>(title: &str, inner: I) -> String {
 
 fn render_task<'a>(task: &'a Task) -> Box<Render + 'a> {
     box_html! {
-        strong: &task.name;
+        li {
+            strong: &task.name;
+            :" ";
+            em: if task.done { "Done" } else { "Not Done" };
+        }
     }
 }
 
@@ -29,10 +33,12 @@ pub fn root(tasks: Vec<Task>) -> String {
         h2: "Tasks:";
         ol(class="tasks") {
             @for task in tasks.iter() {
-                li {
-                    : render_task(&task);
-                }
+                : render_task(&task);
             }
+        }
+        form(method="POST", action="/create") {
+            input(type="text", name="name");
+            input(type="submit");
         }
     })
 }

@@ -54,6 +54,10 @@ impl Request {
     pub fn id(&self) -> &Uuid {
         &self.id
     }
+
+    pub fn body(&self) -> &[u8] {
+        &self.body
+    }
 }
 
 pub trait FromParameter: Sized {

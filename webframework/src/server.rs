@@ -86,7 +86,7 @@ impl<S: Router + 'static + Send> hyper::service::Service for Service<S> {
                 _ => (),
             }
 
-            slog::debug!(time_logger, "Handled in {}ms", time; "elapsed_time" => time, "status" => status);
+            slog::info!(time_logger, "Handled in {}ms", time; "elapsed_time" => time, "status" => status);
             resp
         }))
     }
