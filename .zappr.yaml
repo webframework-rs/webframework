@@ -1,0 +1,5 @@
+commit:
+  message:
+    # note that there are no default patterns for commit messages
+    patterns:
+      - "^(feat|fix|chore|test|refactor|style|docs)\([\w-]+\): .*" # has to begin with hash # and at least one number
