@@ -16,6 +16,20 @@ If you are looking for documentation you can find that here: **TODO**
 The complete docs can be found here:
 [**Documentation**](https://docs.rs/webframework/)
 
+Features
+--------
+
+- Async
+- Easy to Use
+
+_More to come!_ The project is being actively developed. Feel free to join and
+help expand the framework.
+
+Example
+-------
+
+[You can find an example in the documentation.](https://docs.rs/webframework/)
+
 Structure
 ---------
 
